@@ -1,44 +1,83 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>AB Studio Spam Test</title>
+  <title>🔥 AB Notification System</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    button {
+      background: #00b894;
+      color: white;
+      padding: 15px 30px;
+      font-size: 18px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #2d3436;
+    }
+  </style>
 </head>
 <body>
-  <h2>🚨 1 Second e 1 Notification Test</h2>
-  <button onclick="startSpam()">Start Spam</button>
-  <button onclick="stopSpam()">Stop Spam</button>
 
+  <h1>🚀 AB Notification System</h1>
+  <button onclick="requestPermission()">Enable Notification</button>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-app.js";
+    import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-messaging.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyD3kO_ULF76RJkJf1yhvo5cdM4Hoqo4fHA",
+      authDomain: "abcoinseo-e2f66.firebaseapp.com",
+      databaseURL: "https://abcoinseo-e2f66-default-rtdb.firebaseio.com",
+      projectId: "abcoinseo-e2f66",
+      storageBucket: "abcoinseo-e2f66.appspot.com",
+      messagingSenderId: "396837162872",
+      appId: "1:396837162872:web:c204ca5c36f5d2d87bc28d"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const messaging = getMessaging(app);
+
+    async function requestPermission() {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        const token = await getToken(messaging, {
+          vapidKey: "BNOkFpjF0JtY4mFDppr1sxqXRxOLUnLpcOJnqqq7W1M8kdn4v-4NKzrBDstrdBWfZvl_4y3ct3TmJBb-zgzDR9w"
+        });
+        console.log("📱 Token:", token);
+        alert("✅ Notification Enabled!\nToken copied to console.");
+      } else {
+        alert("❌ Permission denied");
+      }
+    }
+
+    onMessage(messaging, (payload) => {
+      const { title, body } = payload.notification;
+      new Notification(title, { body });
+    });
+  </script>
+
+  <!-- Service Worker registration -->
   <script>
-    let interval;
-
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').then(reg => {
-        console.log("SW Registered");
-      });
-    }
-
-    function startSpam() {
-      Notification.requestPermission().then(permission => {
-        if (permission === "granted") {
-          interval = setInterval(() => {
-            navigator.serviceWorker.getRegistration().then(reg => {
-              reg.showNotification("🚨 AB Studio Alert!", {
-                body: "Every second notification 😅",
-                icon: "https://cdn-icons-png.flaticon.com/512/727/727399.png",
-                vibrate: [100, 50, 100],
-              });
-            });
-          }, 1000); // 1000ms = 1 second
-        } else {
-          alert("Permission denied.");
-        }
-      });
-    }
-
-    function stopSpam() {
-      clearInterval(interval);
-      alert("Stopped notifications");
+      navigator.serviceWorker.register('firebase-messaging-sw.js')
+        .then((registration) => {
+          console.log("✅ Service Worker registered");
+        }).catch((err) => {
+          console.error("❌ SW Error", err);
+        });
     }
   </script>
 </body>
