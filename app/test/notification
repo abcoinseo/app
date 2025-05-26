@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Notification Button</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f4f8;
+            color: #333;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 30px 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .container:hover {
+            transform: translateY(-5px);
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 25px;
+        }
+
+        .notify-button {
+            background-image: linear-gradient(to right, #007bff 0%, #0056b3 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+            outline: none;
+        }
+
+        .notify-button:hover {
+            background-image: linear-gradient(to right, #0056b3 0%, #004085 100%);
+            box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .notify-button:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 10px rgba(0, 123, 255, 0.2);
+        }
+
+        .notify-button:disabled {
+            background-image: linear-gradient(to right, #cccccc 0%, #b3b3b3 100%);
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .status-message, .countdown-message {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #555;
+            min-height: 24px; /* Reserve space */
+        }
+
+        .countdown-message {
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        /* Simple icon (optional, use if you have one) */
+        /* .icon-bell { display: inline-block; width: 20px; height: 20px; background-image: url('your-bell-icon.svg'); background-size: contain; margin-right: 8px; vertical-align: middle;} */
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Pro Notification Sender</h1>
+        <button id="notifyButton" class="notify-button">
+            <!-- <span class="icon-bell"></span> Optional Icon -->
+            Send Notification
+        </button>
+        <p id="statusMessage" class="status-message"></p>
+        <p id="countdownDisplay" class="countdown-message"></p>
+    </div>
+
+    <script>
+        const notifyButton = document.getElementById('notifyButton');
+        const statusMessage = document.getElementById('statusMessage');
+        const countdownDisplay = document.getElementById('countdownDisplay');
+        let countdownInterval;
+        const NOTIFICATION_DELAY_SECONDS = 5; // Countdown time
+
+        // Check if Notification API is supported
+        if (!("Notification" in window)) {
+            statusMessage.textContent = "This browser does not support desktop notification.";
+            notifyButton.disabled = true;
+        }
+
+        notifyButton.addEventListener('click', handleNotificationRequest);
+
+        function handleNotificationRequest() {
+            notifyButton.disabled = true;
+            statusMessage.textContent = "Checking notification permissions...";
+            countdownDisplay.textContent = ""; // Clear previous countdown
+
+            if (Notification.permission === "granted") {
+                statusMessage.textContent = "Permission already granted.";
+                startCountdownAndNotify();
+            } else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then(function (permission) {
+                    if (permission === "granted") {
+                        statusMessage.textContent = "Permission granted!";
+                        startCountdownAndNotify();
+                    } else {
+                        statusMessage.textContent = "Permission denied. We can't send notifications.";
+                        notifyButton.disabled = false; // Re-enable if denied this time
+                    }
+                });
+            } else {
+                statusMessage.textContent = "Permission was previously denied. Please enable notifications in browser settings.";
+                // Optionally guide user on how to re-enable
+                // notifyButton will remain disabled if permanently denied
+            }
+        }
+
+        function startCountdownAndNotify() {
+            let timeLeft = NOTIFICATION_DELAY_SECONDS;
+            countdownDisplay.textContent = `Notification in ${timeLeft}s...`;
+            statusMessage.textContent = "Countdown started!"; // Update status
+
+            if (countdownInterval) {
+                clearInterval(countdownInterval); // Clear any existing interval
+            }
+
+            countdownInterval = setInterval(() => {
+                timeLeft--;
+                if (timeLeft > 0) {
+                    countdownDisplay.textContent = `Notification in ${timeLeft}s...`;
+                } else {
+                    clearInterval(countdownInterval);
+                    countdownDisplay.textContent = "Sending notification...";
+                    sendNotification();
+                    statusMessage.textContent = "Notification sent!";
+                    notifyButton.disabled = false; // Re-enable button
+                    setTimeout(() => { // Clear messages after a bit
+                        countdownDisplay.textContent = "";
+                        statusMessage.textContent = "Click the button to send another.";
+                    }, 3000);
+                }
+            }, 1000);
+        }
+
+        function sendNotification() {
+            const notificationTitle = "🚀 Pro Alert!";
+            const notificationOptions = {
+                body: "Your automatic notification has arrived after the countdown. Pretty cool, huh?",
+                icon: "https://via.placeholder.com/128/007bff/ffffff?text=N", // Example icon, replace with your own
+                // You can add more options like:
+                // image: 'url/to/large/image.jpg',
+                // tag: 'unique-tag-for-this-notification', // Replaces existing notification with same tag
+                // renotify: true, // If tag is used, renotify will make sound/vibrate even if replacing
+                // requireInteraction: true, // Notification stays until user interacts (not supported everywhere)
+            };
+
+            try {
+                const notification = new Notification(notificationTitle, notificationOptions);
+
+                notification.onclick = function(event) {
+                    // event.preventDefault(); // prevent the browser from focusing the Notification's tab
+                    window.open('https://example.com', '_blank'); // Example action: open a new tab
+                    notification.close();
+                };
+
+                // You can also handle onclose, onerror, onshow
+                // notification.onshow = () => console.log('Notification shown');
+
+            } catch (err) {
+                console.error("Error creating notification:", err);
+                statusMessage.textContent = "Error sending notification. Check console.";
+                notifyButton.disabled = false;
+            }
+        }
+    </script>
+
+</body>
+</html>
