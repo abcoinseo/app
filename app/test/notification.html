@@ -2,47 +2,43 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>AB Studio Push Notification</title>
+  <title>AB Studio Spam Test</title>
 </head>
 <body>
-  <h2>🔔 AB Studio Real Notification Test</h2>
-  <button onclick="subscribe()">Enable Notification</button>
+  <h2>🚨 1 Second e 1 Notification Test</h2>
+  <button onclick="startSpam()">Start Spam</button>
+  <button onclick="stopSpam()">Stop Spam</button>
 
   <script>
-    // Register Service Worker
+    let interval;
+
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js')
-        .then(function(reg) {
-          console.log('Service Worker registered', reg);
-        }).catch(function(error) {
-          console.error('Service Worker error:', error);
-        });
+      navigator.serviceWorker.register('sw.js').then(reg => {
+        console.log("SW Registered");
+      });
     }
 
-    // Request Permission and Show Notification
-    function subscribe() {
-      Notification.requestPermission().then(function(permission) {
+    function startSpam() {
+      Notification.requestPermission().then(permission => {
         if (permission === "granted") {
-          navigator.serviceWorker.getRegistration().then(function(reg) {
-            reg.showNotification("📢 AB Studio Notification!", {
-              body: "নতুন ভিডিও আপলোড হয়েছে! এখনই দেখে ফেলুন!",
-              icon: "https://cdn-icons-png.flaticon.com/512/727/727399.png",
-              image: "https://yourdomain.com/banner.jpg", // optional
-              vibrate: [200, 100, 200],
-              badge: "https://yourdomain.com/badge.png", // optional
-              tag: "ab-studio",
-              actions: [
-                {
-                  action: 'open',
-                  title: 'দেখুন এখনই'
-                }
-              ]
+          interval = setInterval(() => {
+            navigator.serviceWorker.getRegistration().then(reg => {
+              reg.showNotification("🚨 AB Studio Alert!", {
+                body: "Every second notification 😅",
+                icon: "https://cdn-icons-png.flaticon.com/512/727/727399.png",
+                vibrate: [100, 50, 100],
+              });
             });
-          });
+          }, 1000); // 1000ms = 1 second
         } else {
-          alert("Notification permission denied.");
+          alert("Permission denied.");
         }
       });
+    }
+
+    function stopSpam() {
+      clearInterval(interval);
+      alert("Stopped notifications");
     }
   </script>
 </body>
