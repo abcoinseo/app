@@ -1,84 +1,618 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>🔥 Auto Notification Every 30s</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      display: flex; flex-direction: column; justify-content: center; align-items: center;
-      height: 100vh;
-      background: #222;
-      color: #eee;
-      text-align: center;
-    }
-    button {
-      background: #00b894;
-      border: none;
-      padding: 15px 30px;
-      color: white;
-      font-size: 18px;
-      border-radius: 8px;
-      cursor: pointer;
-      margin-top: 20px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Firebase Chat</title>
+    <style>
+        /* Global Styles */
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --background-color: #e9ecef;
+            --text-color: #212529;
+            --border-radius: 0.3rem;
+            --box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        /* Utility Classes */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Main Container */
+        #app-container {
+            background-color: var(--light-color);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            width: 100%;
+            max-width: 800px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 90vh; /* Max height */
+        }
+
+        /* Login Section */
+        #login-section {
+            padding: 40px;
+            text-align: center;
+        }
+
+        #login-section h1 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        .google-signin-btn {
+            background-color: #db4437;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+        }
+        .google-signin-btn svg {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+        }
+
+        .google-signin-btn:hover {
+            background-color: #c33a2c;
+        }
+
+
+        /* Chat Section */
+        #chat-section {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        /* Chat Header */
+        .chat-header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header #user-info img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        .chat-header #user-info span {
+            font-weight: bold;
+        }
+
+        .chat-header button {
+            background-color: var(--light-color);
+            color: var(--primary-color);
+            border: none;
+            padding: 8px 12px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .chat-header button:hover {
+            background-color: #e2e6ea;
+        }
+
+
+        /* Messages Area */
+        #messages-area {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background-color: #f1f1f1; /* Lighter background for messages */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message {
+            padding: 10px 15px;
+            border-radius: var(--border-radius);
+            margin-bottom: 10px;
+            max-width: 70%;
+            word-wrap: break-word;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .message.sent {
+            background-color: var(--primary-color);
+            color: white;
+            align-self: flex-end;
+            margin-left: auto; /* Pushes to right */
+        }
+
+        .message.received {
+            background-color: var(--light-color);
+            color: var(--dark-color);
+            align-self: flex-start;
+            margin-right: auto; /* Pushes to left */
+            border: 1px solid #ddd;
+        }
+
+        .message-sender {
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-bottom: 4px;
+            color: var(--secondary-color);
+        }
+        .message.sent .message-sender {
+            color: rgba(255,255,255,0.8);
+        }
+
+
+        .message-timestamp {
+            font-size: 0.7em;
+            color: var(--secondary-color);
+            text-align: right;
+            margin-top: 5px;
+        }
+        .message.sent .message-timestamp {
+            color: rgba(255,255,255,0.7);
+        }
+
+        /* Input Area */
+        #input-area {
+            display: flex;
+            padding: 15px;
+            background-color: var(--light-color);
+            border-top: 1px solid #ddd;
+        }
+
+        #message-input {
+            flex-grow: 1;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: var(--border-radius);
+            margin-right: 10px;
+            font-size: 16px;
+        }
+
+        #send-button {
+            background-color: var(--success-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 16px;
+        }
+        #send-button:hover {
+            background-color: #218838;
+        }
+
+        /* Notification Permission Prompt */
+        #notification-prompt {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            text-align: center;
+            border-bottom: 1px solid #ffeeba;
+        }
+        #notification-prompt button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 3px;
+            margin-left: 10px;
+        }
+    </style>
 </head>
 <body>
 
-  <h1>🚀 Auto Notification Every 30 Seconds</h1>
-  <p>Press the button below to start notifications</p>
-  <button id="startBtn">Start Notifications</button>
+    <div id="app-container">
+        <!-- Login Section -->
+        <section id="login-section">
+            <h1>Welcome to Pro Chat</h1>
+            <button id="google-signin-btn" class="google-signin-btn">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/><path d="M1 1h22v22H1z" fill="none"/></svg>
+                Sign in with Google
+            </button>
+        </section>
 
-  <script>
-    let notificationInterval;
+        <!-- Chat Section (hidden by default) -->
+        <section id="chat-section" class="hidden">
+            <div class="chat-header">
+                <div id="user-info">
+                    <img id="user-pic" src="" alt="User">
+                    <span id="user-name"></span>
+                </div>
+                <div>
+                    <button id="toggle-notifications-btn">🔔 Notifications</button>
+                    <button id="logout-btn">Logout</button>
+                </div>
+            </div>
 
-    // Function to generate a random ID for demonstration
-    function generateRandomID() {
-      return Math.floor(Math.random() * 1000000);
-    }
+            <div id="notification-prompt" class="hidden">
+                Enable notifications to get alerts for new messages.
+                <button id="enable-notifications-btn">Enable</button>
+            </div>
 
-    // Function to show notification
-    function showNotification() {
-      const id = generateRandomID();
-      const title = 'New ID Selling';
-      const options = {
-        body: `New ID #${id} is now available for sale!`,
-        icon: 'https://img.icons8.com/color/48/000000/bell--v1.png',
-        badge: 'https://img.icons8.com/color/48/000000/bell--v1.png',
-        tag: `new-id-${id}`, // ensures new notification each time
-        renotify: true,
-      };
-      new Notification(title, options);
-    }
+            <div id="messages-area">
+                <!-- Messages will be appended here -->
+            </div>
 
-    // Request permission and start interval
-    document.getElementById('startBtn').addEventListener('click', async () => {
-      if (!('Notification' in window)) {
-        alert('This browser does not support desktop notification');
-        return;
-      }
+            <form id="input-area">
+                <input type="text" id="message-input" placeholder="Type your message..." autocomplete="off">
+                <button type="submit" id="send-button">Send</button>
+            </form>
+        </section>
+    </div>
 
-      let permission = Notification.permission;
-      if (permission === 'default') {
-        permission = await Notification.requestPermission();
-      }
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
 
-      if (permission === 'granted') {
-        showNotification(); // show one immediately
-        notificationInterval = setInterval(showNotification, 30000); // every 30 sec
-        document.getElementById('startBtn').disabled = true;
-        document.getElementById('startBtn').textContent = 'Notifications Running...';
-      } else {
-        alert('Notification permission denied');
-      }
-    });
+    <script>
+        // --------------- START OF FIREBASE CONFIG ---------------
+        const firebaseConfig = {
+            apiKey: "AIzaSyD3kO_ULF76RJkJf1yhvo5cdM4Hoqo4fHA",
+            authDomain: "abcoinseo-e2f66.firebaseapp.com",
+            databaseURL: "https://abcoinseo-e2f66-default-rtdb.firebaseio.com",
+            projectId: "abcoinseo-e2f66",
+            storageBucket: "abcoinseo-e2f66.firebasestorage.app",
+            messagingSenderId: "396837162872",
+            appId: "1:396837162872:web:c204ca5c36f5d2d87bc28d"
+        };
+        // --------------- END OF FIREBASE CONFIG ---------------
 
-    // Optional: clear interval when user leaves page
-    window.addEventListener('beforeunload', () => {
-      if (notificationInterval) clearInterval(notificationInterval);
-    });
-  </script>
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+        let messaging = null; // Initialize later after checking support
 
+        // VAPID key for Push Notifications
+        const VAPID_KEY = "BNOkFpjF0JtY4mFDppr1sxqXRxOLUnLpcOJnqqq7W1M8kdn4v-4NKzrBDstrdBWfZvl_4y3ct3TmJBb-zgzDR9w";
+
+        // DOM Elements
+        const loginSection = document.getElementById('login-section');
+        const chatSection = document.getElementById('chat-section');
+        const googleSignInBtn = document.getElementById('google-signin-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const userInfoDiv = document.getElementById('user-info');
+        const userPic = document.getElementById('user-pic');
+        const userName = document.getElementById('user-name');
+        const messagesArea = document.getElementById('messages-area');
+        const messageInput = document.getElementById('message-input');
+        const inputAreaForm = document.getElementById('input-area');
+        const sendButton = document.getElementById('send-button');
+        const notificationPrompt = document.getElementById('notification-prompt');
+        const enableNotificationsBtn = document.getElementById('enable-notifications-btn');
+        const toggleNotificationsBtn = document.getElementById('toggle-notifications-btn');
+
+
+        let currentUser = null;
+        let fcmToken = null;
+        let notificationsEnabled = false;
+
+        // --------------- AUTHENTICATION ---------------
+        googleSignInBtn.addEventListener('click', () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider)
+                .catch(error => {
+                    console.error("Google Sign-In Error:", error);
+                    alert("Error signing in: " + error.message);
+                });
+        });
+
+        logoutBtn.addEventListener('click', () => {
+            if (fcmToken && currentUser) {
+                // Optional: Remove FCM token from database on logout
+                database.ref(`fcmTokens/${currentUser.uid}/${fcmToken.substring(0,20)}`).remove();
+            }
+            auth.signOut();
+        });
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                currentUser = user;
+                loginSection.classList.add('hidden');
+                chatSection.classList.remove('hidden');
+                userPic.src = user.photoURL || 'https://via.placeholder.com/40'; // Default avatar
+                userName.textContent = user.displayName || user.email;
+                loadMessages();
+                initializeMessaging();
+            } else {
+                currentUser = null;
+                loginSection.classList.remove('hidden');
+                chatSection.classList.add('hidden');
+                messagesArea.innerHTML = ''; // Clear messages
+            }
+        });
+
+        // --------------- MESSAGING (CHAT) ---------------
+        inputAreaForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            sendMessage();
+        });
+
+        function sendMessage() {
+            const text = messageInput.value.trim();
+            if (text && currentUser) {
+                database.ref('messages').push({
+                    uid: currentUser.uid,
+                    displayName: currentUser.displayName || 'Anonymous',
+                    photoURL: currentUser.photoURL,
+                    text: text,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP
+                }).then(() => {
+                    messageInput.value = '';
+                    messagesArea.scrollTop = messagesArea.scrollHeight; // Scroll to bottom
+                }).catch(error => {
+                    console.error("Error sending message:", error);
+                    alert("Error sending message.");
+                });
+            }
+        }
+
+        function loadMessages() {
+            const messagesRef = database.ref('messages').orderByChild('timestamp').limitToLast(100);
+            messagesRef.on('child_added', snapshot => {
+                const message = snapshot.val();
+                const messageId = snapshot.key;
+                displayMessage(message, messageId);
+            });
+             messagesRef.on('child_changed', snapshot => { // For edited messages (if implemented)
+                const message = snapshot.val();
+                const messageId = snapshot.key;
+                // Find and update existing message element or re-render
+                const existingMsgElement = document.getElementById(`msg-${messageId}`);
+                if (existingMsgElement) {
+                    existingMsgElement.remove(); // simple re-add for now
+                    displayMessage(message, messageId);
+                }
+            });
+             messagesRef.on('child_removed', snapshot => { // For deleted messages (if implemented)
+                const messageId = snapshot.key;
+                const msgElement = document.getElementById(`msg-${messageId}`);
+                if (msgElement) {
+                    msgElement.remove();
+                }
+            });
+        }
+
+        function displayMessage(message, messageId) {
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message');
+            msgDiv.id = `msg-${messageId}`;
+
+            if (currentUser && message.uid === currentUser.uid) {
+                msgDiv.classList.add('sent');
+            } else {
+                msgDiv.classList.add('received');
+            }
+
+            const senderDiv = document.createElement('div');
+            senderDiv.classList.add('message-sender');
+            senderDiv.textContent = message.displayName || 'User';
+            if (message.uid !== currentUser.uid && message.photoURL) { // Show pic for others
+                const senderImg = document.createElement('img');
+                senderImg.src = message.photoURL;
+                senderImg.style.width = '20px';
+                senderImg.style.height = '20px';
+                senderImg.style.borderRadius = '50%';
+                senderImg.style.marginRight = '5px';
+                senderImg.style.verticalAlign = 'middle';
+                senderDiv.prepend(senderImg);
+            }
+
+
+            const textDiv = document.createElement('div');
+            textDiv.textContent = message.text;
+
+            const timeDiv = document.createElement('div');
+            timeDiv.classList.add('message-timestamp');
+            timeDiv.textContent = message.timestamp ? new Date(message.timestamp).toLocaleTimeString() : '';
+
+            msgDiv.appendChild(senderDiv);
+            msgDiv.appendChild(textDiv);
+            msgDiv.appendChild(timeDiv);
+
+            messagesArea.appendChild(msgDiv);
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }
+
+        // --------------- PUSH NOTIFICATIONS (FCM) ---------------
+
+        // Service Worker Registration (attempting in-line)
+        // This needs to be in a separate firebase-messaging-sw.js for reliable background notifications
+        // when deployed on a server.
+        const swCode = `
+            importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js');
+            importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js');
+
+            const firebaseConfigSW = ${JSON.stringify(firebaseConfig)}; // Pass config to SW
+
+            firebase.initializeApp(firebaseConfigSW);
+            const messagingSW = firebase.messaging();
+
+            messagingSW.onBackgroundMessage(function(payload) {
+                console.log('[SW] Received background message ', payload);
+                const notificationTitle = payload.notification.title || 'New Chat Message';
+                const notificationOptions = {
+                    body: payload.notification.body,
+                    icon: payload.notification.icon || '/firebase-logo.png' // A default icon URL if you have one
+                };
+                return self.registration.showNotification(notificationTitle, notificationOptions);
+            });
+        `;
+
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator && firebase.messaging.isSupported()) {
+                const swBlob = new Blob([swCode], { type: 'application/javascript' });
+                const swUrl = URL.createObjectURL(swBlob);
+
+                navigator.serviceWorker.register(swUrl, { scope: './' }) // Scope is important
+                    .then(registration => {
+                        console.log('Service Worker registered with scope:', registration.scope);
+                        firebase.messaging().useServiceWorker(registration); // Tell Firebase to use this SW
+                        // Now that SW is registered, get token if permission granted
+                        if (Notification.permission === 'granted') {
+                            getFCMToken();
+                        }
+                    }).catch(err => {
+                        console.error('Service Worker registration failed:', err);
+                        // If SW registration fails, background notifications won't work.
+                        // Foreground will still work.
+                    });
+            } else {
+                console.warn('Service workers or FCM not supported in this browser.');
+            }
+        }
+
+
+        function initializeMessaging() {
+            if (firebase.messaging.isSupported()) {
+                messaging = firebase.messaging();
+                registerServiceWorker(); // Attempt to register our inlined SW
+
+                // Handle foreground messages
+                messaging.onMessage((payload) => {
+                    console.log('Message received in foreground.', payload);
+                    // Show an in-app notification or update UI
+                    const notification = payload.notification;
+                    alert(`New Message: ${notification.title}\n${notification.body}`);
+                    // You can also create a custom in-app notification bar here
+                });
+
+                // Check initial notification permission status
+                updateNotificationButtonState();
+                if (Notification.permission === 'default') {
+                    notificationPrompt.classList.remove('hidden');
+                }
+
+            } else {
+                console.warn('Firebase Messaging is not supported in this browser.');
+                toggleNotificationsBtn.disabled = true;
+                toggleNotificationsBtn.textContent = '🔔 Not Supported';
+                notificationPrompt.classList.add('hidden');
+            }
+        }
+
+        enableNotificationsBtn.addEventListener('click', requestNotificationPermission);
+        toggleNotificationsBtn.addEventListener('click', () => {
+            if (Notification.permission === 'default' || Notification.permission === 'denied') {
+                requestNotificationPermission();
+            } else if (Notification.permission === 'granted') {
+                // Could implement "disable" by removing token, but that's more complex.
+                // For now, just inform user.
+                alert('Notifications are already enabled. To disable, manage site settings in your browser.');
+            }
+        });
+
+        function requestNotificationPermission() {
+            notificationPrompt.classList.add('hidden');
+            if (!messaging) {
+                alert("Messaging not initialized. Try refreshing.");
+                return;
+            }
+
+            Notification.requestPermission().then((permission) => {
+                if (permission === 'granted') {
+                    console.log('Notification permission granted.');
+                    notificationsEnabled = true;
+                    getFCMToken();
+                } else {
+                    console.log('Unable to get permission to notify.');
+                    notificationsEnabled = false;
+                    alert('Notification permission denied. You can enable it in browser settings.');
+                }
+                updateNotificationButtonState();
+            });
+        }
+
+        function getFCMToken() {
+            if (!messaging || !currentUser) return;
+
+            messaging.getToken({ vapidKey: VAPID_KEY })
+                .then((currentToken) => {
+                    if (currentToken) {
+                        fcmToken = currentToken;
+                        console.log('FCM Token:', currentToken);
+                        // Send this token to your server (or store in Firebase DB per user)
+                        // This example stores it under a user's UID for potential targeted notifications
+                        database.ref(`fcmTokens/${currentUser.uid}/${currentToken.substring(0,20)}`).set(currentToken) // Store a shortened key for uniqueness
+                            .then(() => console.log('FCM token stored for user.'))
+                            .catch(err => console.error('Error storing FCM token:', err));
+                        notificationsEnabled = true;
+                    } else {
+                        console.log('No registration token available. Request permission to generate one.');
+                        notificationsEnabled = false;
+                        notificationPrompt.classList.remove('hidden'); // Show prompt again if no token
+                    }
+                    updateNotificationButtonState();
+                }).catch((err) => {
+                    console.error('An error occurred while retrieving token. ', err);
+                    notificationsEnabled = false;
+                    updateNotificationButtonState();
+                });
+        }
+
+        function updateNotificationButtonState() {
+            if (!firebase.messaging.isSupported()) {
+                toggleNotificationsBtn.textContent = '🔔 Not Supported';
+                toggleNotificationsBtn.disabled = true;
+                notificationPrompt.classList.add('hidden');
+                return;
+            }
+
+            if (Notification.permission === 'granted') {
+                toggleNotificationsBtn.textContent = '🔔 Enabled';
+                toggleNotificationsBtn.style.backgroundColor = 'var(--success-color)';
+                toggleNotificationsBtn.style.color = 'white';
+                notificationPrompt.classList.add('hidden');
+                if(!fcmToken) getFCMToken(); // Try to get token if permission is granted but we don't have one
+            } else if (Notification.permission === 'denied') {
+                toggleNotificationsBtn.textContent = '🔔 Denied';
+                toggleNotificationsBtn.style.backgroundColor = 'var(--danger-color)';
+                toggleNotificationsBtn.style.color = 'white';
+                notificationPrompt.classList.add('hidden');
+            } else { // default
+                toggleNotificationsBtn.textContent = '🔔 Enable Notifications';
+                toggleNotificationsBtn.style.backgroundColor = '';
+                toggleNotificationsBtn.style.color = '';
+                notificationPrompt.classList.remove('hidden');
+            }
+        }
+
+        // Initial check when the script loads (after user might be auto-logged in)
+        // The main call to initializeMessaging() is within onAuthStateChanged after user is confirmed.
+    </script>
 </body>
 </html>
