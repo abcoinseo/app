@@ -2,71 +2,48 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>AB Notification</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      background: #f0f0f0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-
-    button {
-      padding: 15px 30px;
-      font-size: 18px;
-      background: #00aaff;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-
-    #notification {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: #fff;
-      border-left: 6px solid #00aaff;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      padding: 15px 20px;
-      border-radius: 8px;
-      display: none;
-      z-index: 9999;
-      width: 280px;
-    }
-
-    #notification h4 {
-      margin: 0 0 5px;
-      font-size: 18px;
-    }
-
-    #notification p {
-      margin: 0;
-      font-size: 14px;
-    }
-  </style>
+  <title>AB Studio Push Notification</title>
 </head>
 <body>
-
-  <button onclick="showNotification()">🔔 Show Notification</button>
-
-  <div id="notification">
-    <h4>AB Studio</h4>
-    <p>নতুন ভিডিও আপলোড হয়েছে! এখনই দেখে ফেলুন।</p>
-  </div>
+  <h2>🔔 AB Studio Real Notification Test</h2>
+  <button onclick="subscribe()">Enable Notification</button>
 
   <script>
-    function showNotification() {
-      const box = document.getElementById("notification");
-      box.style.display = "block";
-      setTimeout(() => {
-        box.style.display = "none";
-      }, 5000); // auto hide after 5s
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(function(reg) {
+          console.log('Service Worker registered', reg);
+        }).catch(function(error) {
+          console.error('Service Worker error:', error);
+        });
+    }
+
+    // Request Permission and Show Notification
+    function subscribe() {
+      Notification.requestPermission().then(function(permission) {
+        if (permission === "granted") {
+          navigator.serviceWorker.getRegistration().then(function(reg) {
+            reg.showNotification("📢 AB Studio Notification!", {
+              body: "নতুন ভিডিও আপলোড হয়েছে! এখনই দেখে ফেলুন!",
+              icon: "https://cdn-icons-png.flaticon.com/512/727/727399.png",
+              image: "https://yourdomain.com/banner.jpg", // optional
+              vibrate: [200, 100, 200],
+              badge: "https://yourdomain.com/badge.png", // optional
+              tag: "ab-studio",
+              actions: [
+                {
+                  action: 'open',
+                  title: 'দেখুন এখনই'
+                }
+              ]
+            });
+          });
+        } else {
+          alert("Notification permission denied.");
+        }
+      });
     }
   </script>
-
 </body>
 </html>
