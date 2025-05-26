@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Firebase Chat - Auto VAPID</title>
+    <title>Pro Firebase Chat (Separate SW)</title>
+    <!-- CSS is identical to the previous "full code" version -->
     <style>
         /* Global Styles */
         :root {
@@ -160,7 +161,7 @@
     </style>
 </head>
 <body>
-
+    <!-- HTML structure is identical to the previous "full code" version -->
     <div id="app-container">
         <div id="in-app-notification-bar" class="hidden">
             <img id="in-app-notif-icon" src="" alt="sender">
@@ -172,7 +173,7 @@
         </div>
 
         <section id="login-section">
-            <h1>Pro Chat (Auto VAPID)</h1>
+            <h1>Pro Chat (Separate SW)</h1>
             <button id="google-signin-btn" class="google-signin-btn">
                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/><path d="M1 1h22v22H1z" fill="none"/></svg>
                 Sign in with Google
@@ -209,6 +210,7 @@
 
     <script>
         // --------------- START OF FIREBASE CONFIG ---------------
+        // This MUST match the config in firebase-messaging-sw.js
         const firebaseConfig = {
             apiKey: "AIzaSyD3kO_ULF76RJkJf1yhvo5cdM4Hoqo4fHA", // REPLACE WITH YOURS
             authDomain: "abcoinseo-e2f66.firebaseapp.com",   // REPLACE WITH YOURS
@@ -225,7 +227,7 @@
         const database = firebase.database();
         let messaging = null;
 
-        // DOM Elements
+        // DOM Elements (identical to previous version)
         const loginSection = document.getElementById('login-section');
         const chatSection = document.getElementById('chat-section');
         const googleSignInBtn = document.getElementById('google-signin-btn');
@@ -248,239 +250,150 @@
         let currentUser = null;
         let fcmToken = null;
 
-        // Placeholder icons (Base64 encoded small transparent PNGs)
-        // These are used by BOTH the main script (for in-app notif) AND the service worker.
-        // For SW, they are re-declared inside swCode to ensure they are self-contained.
+        // Placeholder icons for in-app notifications
         const defaultIconBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABFSURBVFhH7c4xAQAgDMCwC/9P1BJE2LAv4y2Zdp4BRVQUVVFRVUVFVRUVVXVVVXW9gIKqKCoqAioqKkABKioqqupFBQDaDwZpCBVUTXgAAAAASUVORK5CYII=';
         const userDefaultPic = 'https://via.placeholder.com/40/007bff/ffffff?text=U';
         const otherUserDefaultPic = 'https://via.placeholder.com/20/777777/ffffff?text=O';
 
+        // --------------- AUTHENTICATION --------------- (Identical to previous)
+         googleSignInBtn.addEventListener('click', () => {
+             const provider = new firebase.auth.GoogleAuthProvider();
+             auth.signInWithPopup(provider).catch(e => {
+                 console.error("Auth Error: ", e);
+                 alert("Sign-in failed: " + e.message);
+             });
+         });
 
-        // --------------- AUTHENTICATION ---------------
-        googleSignInBtn.addEventListener('click', () => {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithPopup(provider).catch(e => {
-                console.error("Auth Error: ", e);
-                alert("Sign-in failed: " + e.message);
-            });
-        });
+         logoutBtn.addEventListener('click', () => {
+             if (fcmToken && currentUser) {
+                 database.ref(`fcmTokens/${currentUser.uid}/${fcmToken.substring(0,20)}`).remove();
+             }
+             auth.signOut();
+         });
 
-        logoutBtn.addEventListener('click', () => {
-            if (fcmToken && currentUser) {
-                database.ref(`fcmTokens/${currentUser.uid}/${fcmToken.substring(0,20)}`).remove();
-            }
-            auth.signOut();
-        });
+         auth.onAuthStateChanged(user => {
+             if (user) {
+                 currentUser = user;
+                 loginSection.classList.add('hidden');
+                 chatSection.classList.remove('hidden');
+                 userPic.src = user.photoURL || userDefaultPic;
+                 userName.textContent = user.displayName || user.email;
+                 loadMessages();
+                 initializeMessaging();
+                 checkForDeepLink();
+             } else {
+                 currentUser = null;
+                 loginSection.classList.remove('hidden');
+                 chatSection.classList.add('hidden');
+                 messagesArea.innerHTML = '';
+                 inAppNotificationBar.classList.remove('show');
+             }
+         });
 
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                currentUser = user;
-                loginSection.classList.add('hidden');
-                chatSection.classList.remove('hidden');
-                userPic.src = user.photoURL || userDefaultPic;
-                userName.textContent = user.displayName || user.email;
-                loadMessages();
-                initializeMessaging(); // Initialize messaging after user is confirmed
-                checkForDeepLink();
-            } else {
-                currentUser = null;
-                loginSection.classList.remove('hidden');
-                chatSection.classList.add('hidden');
-                messagesArea.innerHTML = '';
-                inAppNotificationBar.classList.remove('show');
-            }
-        });
+        // --------------- MESSAGING (CHAT) --------------- (Identical to previous)
+         inputAreaForm.addEventListener('submit', (e) => {
+             e.preventDefault();
+             sendMessage();
+         });
 
-        // --------------- MESSAGING (CHAT) ---------------
-        inputAreaForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            sendMessage();
-        });
+         function sendMessage() {
+             const text = messageInput.value.trim();
+             if (text && currentUser) {
+                 const messageData = {
+                     uid: currentUser.uid,
+                     displayName: currentUser.displayName || 'Anonymous',
+                     photoURL: currentUser.photoURL || userDefaultPic,
+                     text: text,
+                     timestamp: firebase.database.ServerValue.TIMESTAMP
+                 };
+                 const newMessageRef = database.ref('messages').push();
+                 newMessageRef.set(messageData)
+                 .then(() => {
+                     messageInput.value = '';
+                 }).catch(error => {
+                     console.error("Error sending message:", error);
+                     alert("Failed to send message.");
+                 });
+             }
+         }
 
-        function sendMessage() {
-            const text = messageInput.value.trim();
-            if (text && currentUser) {
-                const messageData = {
-                    uid: currentUser.uid,
-                    displayName: currentUser.displayName || 'Anonymous',
-                    photoURL: currentUser.photoURL || userDefaultPic,
-                    text: text,
-                    timestamp: firebase.database.ServerValue.TIMESTAMP
-                };
-                const newMessageRef = database.ref('messages').push();
-                newMessageRef.set(messageData)
-                .then(() => {
-                    messageInput.value = '';
-                }).catch(error => {
-                    console.error("Error sending message:", error);
-                    alert("Failed to send message.");
-                });
-            }
-        }
+         function loadMessages() {
+             messagesArea.innerHTML = '';
+             const messagesRef = database.ref('messages').orderByChild('timestamp').limitToLast(50);
+             messagesRef.on('child_added', snapshot => {
+                 const message = snapshot.val();
+                 const messageId = snapshot.key;
+                 displayMessage(message, messageId);
+             });
+         }
 
-        function loadMessages() {
-            messagesArea.innerHTML = '';
-            const messagesRef = database.ref('messages').orderByChild('timestamp').limitToLast(50);
-            messagesRef.on('child_added', snapshot => {
-                const message = snapshot.val();
-                const messageId = snapshot.key;
-                displayMessage(message, messageId);
-            });
-        }
+         function displayMessage(message, messageId) {
+             const msgDiv = document.createElement('div');
+             msgDiv.classList.add('message');
+             msgDiv.id = `msg-${messageId}`;
 
-        function displayMessage(message, messageId) {
-            const msgDiv = document.createElement('div');
-            msgDiv.classList.add('message');
-            msgDiv.id = `msg-${messageId}`;
+             const isSent = currentUser && message.uid === currentUser.uid;
+             msgDiv.classList.add(isSent ? 'sent' : 'received');
 
-            const isSent = currentUser && message.uid === currentUser.uid;
-            msgDiv.classList.add(isSent ? 'sent' : 'received');
+             const senderDiv = document.createElement('div');
+             senderDiv.classList.add('message-sender');
 
-            const senderDiv = document.createElement('div');
-            senderDiv.classList.add('message-sender');
+             if (!isSent) {
+                 const senderImg = document.createElement('img');
+                 senderImg.src = message.photoURL || otherUserDefaultPic;
+                 senderDiv.appendChild(senderImg);
+             }
+             senderDiv.appendChild(document.createTextNode(isSent ? 'You' : (message.displayName || 'User')));
 
-            if (!isSent) {
-                const senderImg = document.createElement('img');
-                senderImg.src = message.photoURL || otherUserDefaultPic;
-                senderDiv.appendChild(senderImg);
-            }
-            senderDiv.appendChild(document.createTextNode(isSent ? 'You' : (message.displayName || 'User')));
+             const textDiv = document.createElement('div');
+             textDiv.textContent = message.text;
 
-            const textDiv = document.createElement('div');
-            textDiv.textContent = message.text;
+             const timeDiv = document.createElement('div');
+             timeDiv.classList.add('message-timestamp');
+             timeDiv.textContent = message.timestamp ? new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
 
-            const timeDiv = document.createElement('div');
-            timeDiv.classList.add('message-timestamp');
-            timeDiv.textContent = message.timestamp ? new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+             msgDiv.appendChild(senderDiv);
+             msgDiv.appendChild(textDiv);
+             msgDiv.appendChild(timeDiv);
 
-            msgDiv.appendChild(senderDiv);
-            msgDiv.appendChild(textDiv);
-            msgDiv.appendChild(timeDiv);
-
-            messagesArea.appendChild(msgDiv);
-            // Scroll to bottom only if user is already near the bottom, or it's their own message
-            const isScrolledToBottom = messagesArea.scrollHeight - messagesArea.clientHeight <= messagesArea.scrollTop + 100;
-            if (isSent || isScrolledToBottom) {
-                messagesArea.scrollTop = messagesArea.scrollHeight;
-            }
-        }
+             messagesArea.appendChild(msgDiv);
+             const isScrolledToBottom = messagesArea.scrollHeight - messagesArea.clientHeight <= messagesArea.scrollTop + 100;
+             if (isSent || isScrolledToBottom) {
+                 messagesArea.scrollTop = messagesArea.scrollHeight;
+             }
+         }
 
         // --------------- PUSH NOTIFICATIONS (FCM) ---------------
-        const swCode = `
-            importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js');
-            importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js');
-
-            // These must match your firebaseConfig from the main script
-            const firebaseConfigSW = ${JSON.stringify(firebaseConfig)};
-
-            // Placeholder icons for SW, self-contained
-            const defaultIconBase64SW = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABFSURBVFhH7c4xAQAgDMCwC/9P1BJE2LAv4y2Zdp4BRVQUVVFRVUVFVRUVVXVVVXW9gIKqKCoqAioqKkABKioqqupFBQDaDwZpCBVUTXgAAAAASUVORK5CYII=';
-            const badgeIconBase64SW = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABDSURBVEhL7c0xAQAgDMCwC99PZBSC2LNPxmuy7TxKCkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkrtBwUHLQE+kBCuS0NnAAAAAElFTkSuQmCC';
-            const openChatIconBase64SW = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAPJJREFUSA1jZGRgYPj////PwMSkpMAgH4rLgHkYGBgYWJiYgPnz508GOAgDgwMrEwMzrLcPIHAFIM4BYl4gVgbiZCAuB+IAIQ4gZoZiBSAWEuJAIA4EYjEQlwBxDhDzALEGEBNhKCoG4kAgjgbiNiDuAuJ9IO4ExDEAWh2MClMMpEZpQKpRAAgBKGqHViaGZZiLgf0Anx4NXYH0YgjxAZiuENYBspFoALUj2IBeQIYhYBIGpoYVcAHpFGPhDCDGgVgQCAOBuAyIN4A4CIg3gTgZiBdAHAyEHyAOBwK0JKaLMRRtwDQgkcZDAYAFAChxRbpCBiFNAAAAAElFTkSuQmCC';
-
-
-            if (!firebase.apps.length) {
-                firebase.initializeApp(firebaseConfigSW);
-            }
-            const messagingSW = firebase.messaging();
-
-            self.addEventListener('install', (event) => { event.waitUntil(self.skipWaiting()); });
-            self.addEventListener('activate', (event) => { event.waitUntil(self.clients.claim()); });
-
-            messagingSW.onBackgroundMessage(function(payload) {
-                console.log('[SW] Received background message: ', payload);
-                const pData = payload.data || {};
-                const pNotif = payload.notification || {};
-
-                const notificationTitle = pData.title || pNotif.title || 'New Message';
-                const notificationBody = pData.body || pNotif.body || 'You have a new message.';
-                const notificationIcon = pData.icon || pNotif.icon || defaultIconBase64SW;
-                const badge = pData.badge || badgeIconBase64SW;
-                const image = pData.image;
-                const tag = pData.tag || 'chat-message-group';
-                const renotify = pData.renotify === 'true' || true;
-                const clickUrl = pData.url || self.registration.scope;
-                const messageId = pData.messageId;
-
-                let finalTitle = notificationTitle;
-                if (pData.senderName && (notificationTitle.toLowerCase() === 'new message' || !notificationTitle) ) {
-                     finalTitle = \`\${pData.senderName}\`;
-                } else if (pData.senderName) {
-                     finalTitle = \`\${pData.senderName}: \${notificationTitle}\`;
-                }
-
-                const notificationOptions = {
-                    body: notificationBody,
-                    icon: notificationIcon,
-                    badge: badge,
-                    image: image,
-                    tag: tag,
-                    renotify: renotify,
-                    requireInteraction: pData.requireInteraction === 'true' || false,
-                    data: { url: clickUrl, messageId: messageId },
-                    actions: [ { action: 'open_chat', title: 'Open Chat', icon: openChatIconBase64SW } ]
-                };
-                return self.registration.showNotification(finalTitle, notificationOptions);
-            });
-
-            self.addEventListener('notificationclick', function(event) {
-                console.log('[SW] Notification click. Action:', event.action, 'Data:', event.notification.data);
-                event.notification.close();
-                const targetUrl = event.notification.data?.url || self.registration.scope;
-                const messageId = event.notification.data?.messageId;
-
-                event.waitUntil(
-                    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
-                        for (const client of clientList) {
-                            try {
-                                const clientUrl = new URL(client.url);
-                                const targetUrlObj = new URL(targetUrl, client.url); // Resolve relative
-                                if (clientUrl.origin === targetUrlObj.origin && clientUrl.pathname === targetUrlObj.pathname && 'focus' in client) {
-                                    client.focus();
-                                    if (messageId && client.postMessage) {
-                                        client.postMessage({ type: 'navigate_to_message', messageId: messageId });
-                                    }
-                                    return;
-                                }
-                            } catch(e) { console.warn("[SW] Error processing client:", client.url, e); }
-                        }
-                        if (clients.openWindow) {
-                            let urlToOpen = targetUrl;
-                            if (messageId) {
-                                try {
-                                    const tempUrl = new URL(urlToOpen, self.location.origin);
-                                    tempUrl.searchParams.append('focusMessageId', messageId);
-                                    urlToOpen = tempUrl.href;
-                                } catch (e) { console.warn("[SW] Error creating URL with messageId:", e); }
-                            }
-                            return clients.openWindow(urlToOpen);
-                        }
-                    })
-                );
-            });
-        `;
+        // REMOVED: const swCode = `...`;
 
         function registerServiceWorker() {
             if ('serviceWorker' in navigator && firebase.messaging.isSupported()) {
-                const swBlob = new Blob([swCode.trim()], { type: 'application/javascript' });
-                const swUrl = URL.createObjectURL(swBlob);
-
-                navigator.serviceWorker.register(swUrl, { scope: './' })
+                // Register the firebase-messaging-sw.js file.
+                // IMPORTANT: This path is relative to the root of your domain/hosting.
+                // If firebase-messaging-sw.js is in the root, use '/firebase-messaging-sw.js'
+                navigator.serviceWorker.register('/firebase-messaging-sw.js') // Or './firebase-messaging-sw.js' if index.html is also at root
                     .then(registration => {
-                        console.log('Service Worker registered, scope:', registration.scope);
+                        console.log('Service Worker registered with scope:', registration.scope);
+                        // Pass the registration to Firebase Messaging.
+                        // This is required so Firebase knows the SW to use.
                         messaging.useServiceWorker(registration);
                         if (Notification.permission === 'granted' && currentUser) getFCMToken();
-                    }).catch(err => console.error('Service Worker registration failed:', err));
+                    }).catch(err => {
+                        console.error('Service Worker registration failed:', err);
+                        alert("Push notification service worker failed to register. Notifications may not work. Check console.");
+                    });
             } else {
-                console.warn('Service workers or FCM not supported.');
+                console.warn('Service workers or FCM not supported in this browser.');
+                alert("This browser does not fully support push notifications.");
             }
         }
 
         function initializeMessaging() {
             if (firebase.messaging.isSupported()) {
                 messaging = firebase.messaging();
-                registerServiceWorker();
+                registerServiceWorker(); // Call the modified registration function
 
+                // Handle foreground messages
                 messaging.onMessage((payload) => {
                     console.log('Message received in foreground:', payload);
                     const pData = payload.data || {};
@@ -499,156 +412,159 @@
                     notificationPrompt.classList.remove('hidden');
                 }
             } else {
-                console.warn('Firebase Messaging not supported.');
+                console.warn('Firebase Messaging not supported in this browser.');
                 toggleNotificationsBtn.disabled = true;
                 toggleNotificationsBtn.textContent = '🔔 Not Supported';
             }
         }
 
-        enableNotificationsBtn.addEventListener('click', requestNotificationPermission);
-        toggleNotificationsBtn.addEventListener('click', () => {
-            if (Notification.permission === 'default' || Notification.permission === 'denied') {
-                requestNotificationPermission();
-            } else {
-                alert('Notifications are enabled. Manage in browser settings to disable.');
-            }
-        });
+        // enableNotificationsBtn, toggleNotificationsBtn event listeners (Identical to previous)
+         enableNotificationsBtn.addEventListener('click', requestNotificationPermission);
+         toggleNotificationsBtn.addEventListener('click', () => {
+             if (Notification.permission === 'default' || Notification.permission === 'denied') {
+                 requestNotificationPermission();
+             } else {
+                 alert('Notifications are enabled. Manage in browser settings to disable.');
+             }
+         });
 
-        function requestNotificationPermission() {
-            notificationPrompt.classList.add('hidden');
-            if (!messaging) {
-                alert("Messaging not initialized. Please wait or refresh.");
-                return;
-            }
-            Notification.requestPermission().then((permission) => {
-                updateNotificationButtonState();
-                if (permission === 'granted') {
-                    console.log('Notification permission granted.');
-                    if (currentUser) getFCMToken();
-                } else {
-                    console.log('Notification permission denied.');
-                    alert('Notifications denied. You can enable them in your browser site settings.');
-                }
-            });
-        }
+        // requestNotificationPermission, getFCMToken, updateNotificationButtonState (Identical to previous)
+         function requestNotificationPermission() {
+             notificationPrompt.classList.add('hidden');
+             if (!messaging) {
+                 alert("Messaging not initialized. Please wait or refresh.");
+                 return;
+             }
+             Notification.requestPermission().then((permission) => {
+                 updateNotificationButtonState();
+                 if (permission === 'granted') {
+                     console.log('Notification permission granted.');
+                     if (currentUser) getFCMToken();
+                 } else {
+                     console.log('Notification permission denied.');
+                     alert('Notifications denied. You can enable them in your browser site settings.');
+                 }
+             });
+         }
 
-        function getFCMToken() {
-            if (!messaging || !currentUser) {
-                console.log("Cannot get FCM token: no messaging or no current user.");
-                return;
-            }
-            messaging.getToken() // Firebase handles VAPID key if configured in console
-                .then((currentToken) => {
-                    if (currentToken) {
-                        fcmToken = currentToken;
-                        console.log('FCM Token (auto VAPID):', currentToken);
-                        database.ref(`fcmTokens/${currentUser.uid}/${currentToken.substring(0,20)}`).set(currentToken)
-                            .catch(err => console.error('Error storing FCM token:', err));
-                    } else {
-                        console.log('No registration token available. Request permission or check SW.');
-                        if (Notification.permission !== 'denied') notificationPrompt.classList.remove('hidden');
-                    }
-                    updateNotificationButtonState();
-                }).catch((err) => {
-                    console.error('Error retrieving FCM token: ', err);
-                    alert("Could not get notification token. Check console for errors. Ensure Firebase project is set up with a Web Push Certificate.");
-                    updateNotificationButtonState();
-                });
-        }
+         function getFCMToken() {
+             if (!messaging || !currentUser) {
+                 console.log("Cannot get FCM token: no messaging or no current user.");
+                 return;
+             }
+             messaging.getToken() // Firebase handles VAPID key if configured in console
+                 .then((currentToken) => {
+                     if (currentToken) {
+                         fcmToken = currentToken;
+                         console.log('FCM Token (auto VAPID):', currentToken);
+                         database.ref(`fcmTokens/${currentUser.uid}/${currentToken.substring(0,20)}`).set(currentToken)
+                             .catch(err => console.error('Error storing FCM token:', err));
+                     } else {
+                         console.log('No registration token available. Request permission or check SW registration and VAPID key setup in Firebase console.');
+                         if (Notification.permission !== 'denied') notificationPrompt.classList.remove('hidden');
+                     }
+                     updateNotificationButtonState();
+                 }).catch((err) => {
+                     console.error('Error retrieving FCM token: ', err);
+                     alert("Could not get notification token. Check console for errors. Ensure Firebase project is set up with a Web Push Certificate, and the service worker is correctly registered from the root scope.");
+                     updateNotificationButtonState();
+                 });
+         }
 
-        function updateNotificationButtonState() {
-            if (!firebase.messaging.isSupported()) {
+         function updateNotificationButtonState() {
+             if (!firebase.messaging.isSupported()) {
                  toggleNotificationsBtn.textContent = '🔔 Not Supported';
                  toggleNotificationsBtn.disabled = true;
                  notificationPrompt.classList.add('hidden');
                  return;
-            }
-            const perm = Notification.permission;
-            if (perm === 'granted') {
-                toggleNotificationsBtn.textContent = '🔔 Enabled';
-                toggleNotificationsBtn.style.backgroundColor = 'var(--success-color)';
-                toggleNotificationsBtn.style.color = 'white';
-                notificationPrompt.classList.add('hidden');
-                if(!fcmToken && currentUser) getFCMToken(); // Try to get if not already
-            } else if (perm === 'denied') {
-                toggleNotificationsBtn.textContent = '🔔 Denied';
-                toggleNotificationsBtn.style.backgroundColor = 'var(--danger-color)';
-                toggleNotificationsBtn.style.color = 'white';
-                notificationPrompt.classList.add('hidden');
-            } else { // default
-                toggleNotificationsBtn.textContent = '🔔 Enable Notifications';
-                toggleNotificationsBtn.style.backgroundColor = '';
-                toggleNotificationsBtn.style.color = ''; // Reset to default
-                if (currentUser) notificationPrompt.classList.remove('hidden');
-            }
-        }
+             }
+             const perm = Notification.permission;
+             if (perm === 'granted') {
+                 toggleNotificationsBtn.textContent = '🔔 Enabled';
+                 toggleNotificationsBtn.style.backgroundColor = 'var(--success-color)';
+                 toggleNotificationsBtn.style.color = 'white';
+                 notificationPrompt.classList.add('hidden');
+                 if(!fcmToken && currentUser) getFCMToken();
+             } else if (perm === 'denied') {
+                 toggleNotificationsBtn.textContent = '🔔 Denied';
+                 toggleNotificationsBtn.style.backgroundColor = 'var(--danger-color)';
+                 toggleNotificationsBtn.style.color = 'white';
+                 notificationPrompt.classList.add('hidden');
+             } else { // default
+                 toggleNotificationsBtn.textContent = '🔔 Enable Notifications';
+                 toggleNotificationsBtn.style.backgroundColor = '';
+                 toggleNotificationsBtn.style.color = '';
+                 if (currentUser) notificationPrompt.classList.remove('hidden');
+             }
+         }
 
-        // In-App Notification Logic
-        function showInAppNotification(sender, body, iconUrl, messageId) {
-            inAppNotifIcon.src = iconUrl || defaultIconBase64;
-            inAppNotifSender.textContent = sender;
-            inAppNotifBody.textContent = body;
-            inAppNotificationBar.dataset.messageId = messageId || '';
-            inAppNotificationBar.classList.add('show');
-            if (inAppNotifTimeout) clearTimeout(inAppNotifTimeout);
-            inAppNotifTimeout = setTimeout(() => {
-                inAppNotificationBar.classList.remove('show');
-            }, 6000);
-        }
-        inAppNotifCloseBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            inAppNotificationBar.classList.remove('show');
-            if (inAppNotifTimeout) clearTimeout(inAppNotifTimeout);
-        });
-        inAppNotificationBar.addEventListener('click', () => {
-            inAppNotificationBar.classList.remove('show');
-            if (inAppNotifTimeout) clearTimeout(inAppNotifTimeout);
-            const messageId = inAppNotificationBar.dataset.messageId;
-            if (messageId) scrollToMessage(messageId);
-        });
+        // In-App Notification Logic (Identical to previous)
+         function showInAppNotification(sender, body, iconUrl, messageId) {
+             inAppNotifIcon.src = iconUrl || defaultIconBase64;
+             inAppNotifSender.textContent = sender;
+             inAppNotifBody.textContent = body;
+             inAppNotificationBar.dataset.messageId = messageId || '';
+             inAppNotificationBar.classList.add('show');
+             if (inAppNotifTimeout) clearTimeout(inAppNotifTimeout);
+             inAppNotifTimeout = setTimeout(() => {
+                 inAppNotificationBar.classList.remove('show');
+             }, 6000);
+         }
+         inAppNotifCloseBtn.addEventListener('click', (e) => {
+             e.stopPropagation();
+             inAppNotificationBar.classList.remove('show');
+             if (inAppNotifTimeout) clearTimeout(inAppNotifTimeout);
+         });
+         inAppNotificationBar.addEventListener('click', () => {
+             inAppNotificationBar.classList.remove('show');
+             if (inAppNotifTimeout) clearTimeout(inAppNotifTimeout);
+             const messageId = inAppNotificationBar.dataset.messageId;
+             if (messageId) scrollToMessage(messageId);
+         });
 
-        function scrollToMessage(messageId) {
-            const messageElement = document.getElementById(`msg-${messageId}`);
-            if (messageElement) {
-                messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                messageElement.style.backgroundColor = 'var(--primary-color-light)';
-                setTimeout(() => {
-                    messageElement.style.backgroundColor = ''; // Reset highlight
-                }, 2500);
-            }
-        }
+         function scrollToMessage(messageId) {
+             const messageElement = document.getElementById(`msg-${messageId}`);
+             if (messageElement) {
+                 messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                 messageElement.style.backgroundColor = 'var(--primary-color-light)';
+                 setTimeout(() => {
+                     messageElement.style.backgroundColor = '';
+                 }, 2500);
+             }
+         }
 
-        // Listen for messages from Service Worker
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.addEventListener('message', event => {
-                if (event.data && event.data.type === 'navigate_to_message' && event.data.messageId) {
-                    console.log('Client received navigate_to_message from SW:', event.data.messageId);
-                    // Delay slightly to ensure content might be loaded if app was just opened
-                    setTimeout(() => scrollToMessage(event.data.messageId), 300);
-                }
-            });
-        }
 
-        // Handle deep linking from URL query param
-        function checkForDeepLink() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const focusMessageId = urlParams.get('focusMessageId');
-            if (focusMessageId) {
-                const checkMessagesLoaded = setInterval(() => {
-                    if (currentUser && document.getElementById(`msg-${focusMessageId}`)) {
-                        clearInterval(checkMessagesLoaded);
-                        scrollToMessage(focusMessageId);
-                        // Clean URL
-                        const newUrl = window.location.pathname + window.location.hash;
-                        window.history.replaceState({}, document.title, newUrl);
-                    } else if (Date.now() - (linkCheckStartTime || 0) > 10000) { // Timeout
-                        clearInterval(checkMessagesLoaded);
-                    }
-                }, 500);
-                const linkCheckStartTime = Date.now();
-            }
-        }
-        window.addEventListener('load', checkForDeepLink); // Check on initial full page load too
+        // Listen for messages from Service Worker (Identical to previous)
+         if ('serviceWorker' in navigator) {
+             navigator.serviceWorker.addEventListener('message', event => {
+                 if (event.data && event.data.type === 'navigate_to_message' && event.data.messageId) {
+                     console.log('Client received navigate_to_message from SW:', event.data.messageId);
+                     setTimeout(() => scrollToMessage(event.data.messageId), 300);
+                 }
+             });
+         }
+
+        // Handle deep linking from URL query param (Identical to previous)
+         function checkForDeepLink() {
+             const urlParams = new URLSearchParams(window.location.search);
+             const focusMessageId = urlParams.get('focusMessageId');
+             if (focusMessageId) {
+                 const linkCheckStartTime = Date.now(); // Store start time for timeout
+                 const checkMessagesLoaded = setInterval(() => {
+                     if (currentUser && document.getElementById(`msg-${focusMessageId}`)) {
+                         clearInterval(checkMessagesLoaded);
+                         scrollToMessage(focusMessageId);
+                         const newUrl = window.location.pathname + window.location.hash;
+                         window.history.replaceState({}, document.title, newUrl);
+                     } else if (Date.now() - linkCheckStartTime > 10000) { // Timeout after 10s
+                         clearInterval(checkMessagesLoaded);
+                         console.warn("Deep link timeout for messageId:", focusMessageId);
+                     }
+                 }, 500);
+             }
+         }
+         window.addEventListener('load', checkForDeepLink);
+
     </script>
 </body>
 </html>
